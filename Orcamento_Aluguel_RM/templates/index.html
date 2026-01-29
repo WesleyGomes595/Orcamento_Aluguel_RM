@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>SGE | R.M Imobiliária Premium</title>
+    
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('prefer-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body onload="checkTheme()">
+
+    <aside id="sidebar" class="sidebar">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px">
+            <h3 style="margin:0; letter-spacing:1px"><i class="fas fa-history"></i> REGISTROS</h3>
+            <button onclick="toggleSide()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer">&times;</button>
+        </div>
+        <div class="separator" style="background: rgba(255,255,255,0.2)"></div>
+        <div id="histContent"></div> 
+        <div style="position:absolute; bottom:30px; left:30px; right:30px">
+            <button onclick="cleanHist()" class="btn-action" style="background:#b91c1c; font-size:0.8rem">
+                <i class="fas fa-trash"></i> LIMPAR MEMÓRIA
+            </button>
+        </div>
+    </aside>
+
+    <header class="header-hero">
+        <div class="brand-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="logo-img" style="width:100px; height:100px; object-fit: cover;">
+            <div class="brand-name">
+                <h1>R.M Imobiliária</h1>
+                <p>Soluções em Engenharia de Locação</p>
+            </div>
+        </div>
+        <div style="display:flex; gap:15px; align-items: center;">
+            <a href="/reset" class="btn-action" style="background:#ef4444; text-decoration:none; padding:10px 20px; width:auto; font-size:0.8rem">
+                <i class="fas fa-power-off"></i> REINICIAR
+            </a>
+            <button onclick="toggleSide()" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); color:white; padding:10px 20px; border-radius:30px; cursor:pointer">
+                <i class="fas fa-list"></i> Histórico
+            </button>
+            <button onclick="toggleTheme()" style="background:white; color:#312e81; border:none; width:40px; height:40px; border-radius:50%; cursor:pointer; font-size:1.2rem">
+                <i class="fas fa-adjust"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="main-grid">
+        <section class="card-pro">
+            <h2 style="margin-top:0; color:var(--primary)"><i class="fas fa-cogs"></i> Parâmetros</h2>
+            <div class="separator"></div>
+
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label">Unidade Habitacional</label>
+                    <select name="tipo" id="tipo" class="form-control" onchange="uiLogic()">
+                        <option value="Apartamento">Apartamento (Standard)</option>
+                        <option value="Casa">Casa (Premium)</option>
+                        <option value="Estúdio">Estúdio (Compact)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="qBox">
+                    <label class="form-label">Configuração de Dormitórios</label>
+                    <select name="quartos" class="form-control">
+                        <option value="1">1 Quarto</option>
+                        <option value="2">2 Quartos (+Adicional)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="vBox" style="display:none">
+                    <label class="form-label">Vagas de Garagem (Estúdio)</label>
+                    <input type="number" name="vagas" class="form-control" value="0" min="0">
+                </div>
+
+                <div style="background:var(--border); padding:1px; margin:20px 0"></div>
+
+                <div style="margin:20px 0">
+                    <label id="gRow" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer">
+                        <input type="checkbox" name="garagem" value="true" style="width:18px; height:18px">
+                        <span>Adicionar Garagem Coberta (+R$300)</span>
+                    </label>
+                    <label id="cRow" style="display:flex; align-items:center; gap:10px; cursor:pointer">
+                        <input type="checkbox" name="criancas" value="true" style="width:18px; height:18px">
+                        <span>Perfil Sem Crianças (-5% Off)</span>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn-action btn-calc">PROCESSAR CÁLCULO</button>
+            </form>
+            <div style="text-align:center; margin-top:20px">
+                <button onclick="openM('credModal')" style="background:none; border:none; color:var(--text-muted); text-decoration:underline; cursor:pointer">Créditos Técnicos</button>
+            </div>
+        </section>
+
+        <section class="card-pro">
+            {% if res %}
+                <div style="display:flex; justify-content:space-between; align-items:flex-start">
+                    <div>
+                        <span style="background:var(--primary); color:white; padding:5px 10px; border-radius:5px; font-size:0.7rem; font-weight:bold">RESULTADO</span>
+                        <h1 style="font-size:3rem; margin:10px 0; color:var(--text-main)">R$ {{ res.valor }}</h1>
+                        <p style="color:var(--text-muted)">Imóvel selecionado: <strong>{{ res.tipo }}</strong></p>
+                    </div>
+                    <div style="text-align:right">
+                        <img src="{{ url_for('static', filename='logo.png') }}" class="logo-img" style="width:110px; height:110px; object-fit: cover;">
+                    </div>
+                </div>
+                <div class="table-box">
+                    <table>
+                        <thead><tr><th>Mês Ref.</th><th>Valor Locação</th><th>Contrato</th><th>Total Líquido</th></tr></thead>
+                        <tbody>
+                            {% for l in res.tabela %}
+                            <tr>
+                                <td>{{ l.m }}º Mês</td>
+                                <td>R$ {{ l.a }}</td>
+                                <td>R$ {{ l.c }}</td>
+                                <td style="color:var(--primary); font-weight:bold">R$ {{ l.t }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:15px; margin-top:25px">
+                    <button onclick="openM('payModal')" class="btn-action btn-pay"><i class="fas fa-check"></i> CONTRATAR</button>
+                    {% if res.csv %}
+                        <a href="{{ url_for('static', filename='downloads/' + res.csv) }}" download class="btn-action btn-csv" style="text-decoration:none; display:flex; justify-content:center; align-items:center; gap:10px">
+                            <i class="fas fa-file-csv"></i> CSV
+                        </a>
+                    {% else %}
+                        <button disabled class="btn-action btn-csv" style="opacity:0.5">Erro CSV</button>
+                    {% endif %}
+                    <button onclick="window.print()" class="btn-action btn-pdf"><i class="fas fa-file-pdf"></i> PDF</button>
+                </div>
+            {% else %}
+                <div style="text-align:center; padding:50px; opacity:0.4">
+                    <i class="fas fa-chart-pie fa-5x" style="margin-bottom:20px"></i>
+                    <h3>Aguardando Dados</h3>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+
+    <footer class="footer-corp">
+        <div style="max-width:1200px; margin:auto; padding:0 20px">
+            <img src="{{ url_for('static', filename='logo.png') }}" class="logo-img" style="width:80px; height:80px; object-fit: cover; filter:grayscale(100%); opacity:0.6">
+            <h3 style="margin:10px 0; color:var(--text-main)">R.M IMOBILIÁRIA S.A.</h3>
+            <div style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px">
+                <p><i class="fas fa-map-marker-alt"></i> Av. Paulista, 1000 - São Paulo, SP</p>
+                <p><i class="fas fa-phone"></i> (11) 99999-8888</p>
+            </div>
+            <div class="separator"></div>
+            <p style="font-size:0.7rem; color:var(--text-muted)">© 2026 Wesley Freitas - Engenharia da Computação UNIFECAF.</p>
+        </div>
+    </footer>
+
+    <div id="payModal" class="modal">
+        <div class="card-pro" style="width:400px; text-align:center">
+            <i class="fas fa-lock fa-3x" style="color:var(--primary); margin-bottom:20px"></i>
+            <h2>Checkout Seguro</h2>
+            <div style="text-align:left; margin:20px 0">
+                <label class="form-label">Número do Cartão</label>
+                <input type="text" class="form-control" placeholder="0000 0000 0000 0000" style="margin-bottom:10px">
+                <div style="display:flex; gap:10px">
+                    <input type="text" class="form-control" placeholder="MM/AA">
+                    <input type="text" class="form-control" placeholder="CVV">
+                </div>
+            </div>
+            <div style="background:#fee2e2; color:#b91c1c; padding:15px; border-radius:8px; font-size:0.8rem; margin-bottom:15px; border:1px solid #f87171">
+                <i class="fas fa-info-circle"></i> <strong>PROJETO ACADÊMICO:</strong> Este é um simulador para fins de estudo. Não insira dados reais.
+            </div>
+            <button onclick="alert('Simulação realizada com sucesso!'); closeM('payModal')" class="btn-action btn-pay">CONFIRMAR PAGAMENTO</button>
+            <button onclick="closeM('payModal')" style="border:none; background:none; text-decoration:underline; cursor:pointer; margin-top:10px">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="credModal" class="modal">
+        <div class="card-pro" style="width:450px; text-align:center">
+            <img src="{{ url_for('static', filename='unifecaf_logo.png') }}" style="width:180px; margin-bottom:20px; border-radius: 10px;">
+            <h3>Engenharia da Computação</h3>
+            <p><strong>Aluno:</strong> Wesley Freitas</p>
+            <p><strong>Professor:</strong> Fernando Leonid</p>
+            <p><strong>Projeto:</strong> Algorithmic Thinking & OOP</p>
+            <button onclick="closeM('credModal')" class="btn-action btn-calc" style="margin-top:20px">Voltar</button>
+        </div>
+    </div>
+
+    <script>
+        function uiLogic() {
+            let t = document.getElementById('tipo').value;
+            document.getElementById('qBox').style.display = (t==='Estúdio')?'none':'block';
+            document.getElementById('vBox').style.display = (t==='Estúdio')?'block':'none';
+            document.getElementById('gRow').style.display = (t==='Estúdio')?'none':'flex';
+            document.getElementById('cRow').style.display = (t==='Apartamento')?'flex':'none';
+        }
+
+        function toggleSide() { document.getElementById('sidebar').classList.toggle('active'); }
+        function openM(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeM(id) { document.getElementById(id).style.display = 'none'; }
+        
+        function toggleTheme() { 
+            let html = document.documentElement;
+            let theme = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', theme);
+            localStorage.setItem('prefer-theme', theme);
+        }
+
+        // CORRIGIDO: Removido o código de tema redundante que causava o bug
+        function checkTheme() {
+            uiLogic();
+            loadHist();
+        }
+
+        {% if res %}
+            let h = JSON.parse(sessionStorage.getItem('rm_history_pro') || '[]');
+            let agora = new Date();
+            let tempo = agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            h.unshift({t: "{{ res.tipo }}", v: "{{ res.valor }}", time: tempo});
+            sessionStorage.setItem('rm_history_pro', JSON.stringify(h.slice(0, 10)));
+        {% endif %}
+
+        function loadHist() {
+            let h = JSON.parse(sessionStorage.getItem('rm_history_pro') || '[]');
+            let container = document.getElementById('histContent');
+            if(h.length === 0) {
+                container.innerHTML = '<p style="color:rgba(255,255,255,0.5); text-align:center; font-size:0.8rem">Nenhum registro recente.</p>';
+            } else {
+                container.innerHTML = h.map(item => `
+                    <div class="hist-item" style="background: rgba(255,255,255,0.1); padding: 10px; margin-bottom: 5px; border-radius: 5px;">
+                        <small>${item.time}</small><br><strong>${item.t}</strong>: R$ ${item.v}
+                    </div>
+                `).join('');
+            }
+        }
+        function cleanHist() { sessionStorage.clear(); loadHist(); }
+    </script>
+</body>
+</html>
